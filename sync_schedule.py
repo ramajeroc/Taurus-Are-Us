@@ -3,14 +3,17 @@ Pulls schedule.json (the file you export from the scheduler artifact and
 commit to this repo) into the database.
 
 Upsert, not replace: a slot's posting status (fb_posted, ig_posted,
-status, posted_at) is only ever set on first insert. Re-running this after
-re-exporting an updated schedule.json — which happens on every deploy,
-automatically — never resets or duplicates something that's already gone
-out; it only ever updates the content fields (title, url, caption) on
-rows that haven't posted yet.
+status, posted_at) is only ever set on first insert, and on first insert
+it's taken from whatever the export already says — so a slot marked
+"posted" (already sent out via the local script, or manually marked
+posted in the artifact) arrives already marked done, and the cloud worker
+won't post it again. Every re-sync after that only ever updates the
+content fields (title, url, caption) on rows that haven't posted yet;
+existing posting status is never touched again once a row exists.
 """
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 from models import ScheduledPost, get_session
@@ -35,10 +38,19 @@ def sync():
 
         row = session.get(ScheduledPost, row_id)
         if row is None:
+            # If this slot already shows "posted" in the export — because it
+            # went out earlier via the local publish script, or you manually
+            # marked it posted in the artifact — respect that on arrival.
+            # Otherwise a slot you already posted locally would look
+            # brand-new to the cloud worker and get posted a second time.
+            already_posted = entry.get("status") == "posted"
             row = ScheduledPost(
                 id=row_id, date=date, time=time_,
-                fb_posted=False, ig_posted=False, status="assigned",
+                fb_posted=already_posted, ig_posted=already_posted,
+                status=entry.get("status", "assigned"),
             )
+            if already_posted:
+                row.posted_at = datetime.utcnow()
             session.add(row)
 
         # Content fields always refresh from the latest export. Posting
