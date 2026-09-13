@@ -1,0 +1,49 @@
+databases:
+  - name: taurus-publish-db
+    plan: free
+
+services:
+  - type: cron
+    name: taurus-publish-worker
+    runtime: python
+    plan: starter
+    rootDir: Taurus Are Us - Everyday Automation
+    schedule: "*/15 * * * *"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python worker.py"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DATABASE_URL
+        fromDatabase:
+          name: taurus-publish-db
+          property: connectionString
+      - key: PAGE_ID
+        sync: false
+      - key: IG_USER_ID
+        sync: false
+      - key: PAGE_ACCESS_TOKEN
+        sync: false
+
+  - type: web
+    name: taurus-publish-dashboard
+    runtime: python
+    plan: starter
+    rootDir: Taurus Are Us - Everyday Automation
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn dashboard:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DATABASE_URL
+        fromDatabase:
+          name: taurus-publish-db
+          property: connectionString
+      - key: PAGE_ID
+        sync: false
+      - key: IG_USER_ID
+        sync: false
+      - key: PAGE_ACCESS_TOKEN
+        sync: false
+      - key: DASHBOARD_PASSWORD
+        sync: false
