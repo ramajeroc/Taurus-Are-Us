@@ -24,7 +24,7 @@ independently — if Facebook succeeds and Instagram fails on one run,
 the next run only retries Instagram, never re-posts to Facebook.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from graph_api import publish_facebook, publish_instagram
@@ -97,7 +97,7 @@ def run():
         )
         if targets_met:
             row.status = "posted"
-            row.posted_at = datetime.utcnow()
+            row.posted_at = datetime.now(timezone.utc)
 
         session.commit()
 

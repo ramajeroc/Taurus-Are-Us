@@ -13,7 +13,7 @@ existing posting status is never touched again once a row exists.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from models import ScheduledPost, get_session
@@ -50,7 +50,7 @@ def sync():
                 status=entry.get("status", "assigned"),
             )
             if already_posted:
-                row.posted_at = datetime.utcnow()
+                row.posted_at = datetime.now(timezone.utc)
             session.add(row)
 
         # Content fields always refresh from the latest export. Posting
