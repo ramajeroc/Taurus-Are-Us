@@ -41,13 +41,11 @@ def create_ig_container(row):
     payload = {"caption": row.caption or "", "access_token": PAGE_ACCESS_TOKEN}
     if row.media_type == "image":
         payload["image_url"] = row.url
-    elif row.media_type == "reel":
+    else:  # video or reel — Instagram deprecated media_type=VIDEO entirely;
+        # all video content, feed or Reels, now has to publish as REELS
         payload["media_type"] = "REELS"
         payload["video_url"] = row.url
         payload["share_to_feed"] = "true"
-    else:  # video
-        payload["media_type"] = "VIDEO"
-        payload["video_url"] = row.url
 
     resp = requests.post(f"{GRAPH_URL}/{IG_USER_ID}/media", data=payload, timeout=60)
     data = resp.json()
