@@ -1,12 +1,9 @@
 """
 Database model for the cloud publish worker.
 
-Why Postgres instead of a local schedule.json, the way the local version
-works: Render's Cron Jobs have no persistent disk — each run is a fresh
-container that disappears afterward. Anything written to a local file
-during one run is gone before the next run starts. A database row is what
-actually survives between runs, which is what makes "don't re-post
-something that already went out" possible at all in this environment.
+Why Postgres instead of a local schedule.json: Render's Cron Jobs have no
+persistent disk — each run is a fresh container that disappears afterward.
+A database row is what actually survives between runs.
 """
 
 import os
@@ -51,6 +48,14 @@ def _normalized_db_url():
     # SQLAlchemy's newer versions reject outright — has to be postgresql://.
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
+    # Force the psycopg2 driver explicitly. Left unqualified, a newer
+    # SQLAlchemy release can resolve the plain "postgresql://" scheme to
+    # the psycopg (v3) dialect instead of psycopg2 — but requirements.txt
+    # only installs psycopg2-binary, so that resolution crashes at import
+    # time with "ModuleNotFoundError: No module named 'psycopg'". Naming
+    # the driver here removes the ambiguity for good.
+    if db_url.startswith("postgresql://") and "+psycopg" not in db_url:
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
     return db_url
 
 
